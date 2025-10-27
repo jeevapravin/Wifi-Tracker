@@ -5,3 +5,5 @@ pandas
 scapy
 psutil
 netifaces
+Flask-Login
+Werkzeug

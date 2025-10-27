@@ -109,3 +109,22 @@ INSERT INTO Connects (Device_ID, Network_ID) VALUES
 ('D001', 'N006'),
 ('D002', 'N007'),
 ('D003', 'N008');
+
+
+USE dbms_proj;
+
+ALTER TABLE User
+ADD COLUMN Password_Hash VARCHAR(255) NOT NULL;
+
+
+-- Update existing users with hashed passwords (example hashes)
+
+UPDATE User SET Password_Hash = 'pbkdf2:sha256:1000000$Q0MrOdtLBypJijm7$7c244b5ae0e05edd572e0032b9487ffb735ad904c356566c721f77277c1bdc21' WHERE User_ID = 'U001';
+
+UPDATE User SET Password_Hash = 'pbkdf2:sha256:1000000$Q0MrOdtLBypJijm7$7c244b5ae0e05edd572e0032b9487ffb735ad904c356566c721f77277c1bdc21' WHERE User_ID = 'U002';
+
+UPDATE User SET Password_Hash = 'pbkdf2:sha256:1000000$Q0MrOdtLBypJijm7$7c244b5ae0e05edd572e0032b9487ffb735ad904c356566c721f77277c1bdc21' WHERE User_ID = 'U003';
+
+UPDATE User SET Password_Hash = 'pbkdf2:sha256:1000000$Q0MrOdtLBypJijm7$7c244b5ae0e05edd572e0032b9487ffb735ad904c356566c721f77277c1bdc21' WHERE User_ID = 'U004';
+
+UPDATE User SET Password_Hash = 'pbkdf2:sha256:1000000$Q0MrOdtLBypJijm7$7c244b5ae0e05edd572e0032b9487ffb735ad904c356566c721f77277c1bdc21' WHERE User_ID = 'U005';
