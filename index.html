@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Console</title>
-    <!-- Chart.js library for graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-dark: #1a1c23;
@@ -18,9 +20,10 @@
             --success-color: #22c55e;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* NEW: Font family */
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding-top: 25px; /* Space for the status banner */
+            padding-top: 25px; 
             background-color: var(--bg-dark);
             color: var(--text-primary);
             display: flex;
@@ -39,12 +42,8 @@
             z-index: 1000;
             transition: background-color 0.5s;
         }
-        .status-banner.error {
-            background-color: var(--error-color);
-        }
-        .status-banner.success {
-            background-color: var(--success-color);
-        }
+        .status-banner.error { background-color: var(--error-color); }
+        .status-banner.success { background-color: var(--success-color); }
         .sidebar {
             width: 240px;
             background-color: var(--bg-light);
@@ -52,24 +51,46 @@
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
+            flex-shrink: 0;
         }
         .sidebar-header {
             font-size: 1.5em;
             font-weight: bold;
             margin-bottom: 30px;
+            /* NEW: Polish */
+            padding-left: 5px;
+            letter-spacing: 1px;
         }
         .sidebar-nav a {
-            display: block;
-            color: var(--text-secondary);
+            /* NEW: Icon alignment */
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            /* NEW: Text color */
+            color: #c0c0c0;
             text-decoration: none;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 10px;
             transition: background-color 0.2s, color 0.2s;
+            font-weight: 500;
         }
-        .sidebar-nav a:hover, .sidebar-nav a.active {
+        .sidebar-nav a:hover {
+            background-color: #31343d;
+            color: #ffffff;
+        }
+        .sidebar-nav a.active {
             background-color: var(--accent);
-            color: var(--text-primary);
+            /* NEW: Active text color */
+            color: #ffffff;
+        }
+        /* NEW: Icon styles */
+        .sidebar-nav a svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2px;
+            fill: none;
+            stroke: currentColor;
         }
         .main-content {
             flex-grow: 1;
@@ -78,7 +99,12 @@
         }
         .page { display: none; }
         .page.active { display: block; }
-        .page h1 { font-size: 2em; margin-bottom: 20px; }
+        .page h1 { 
+            font-size: 2em; 
+            margin-bottom: 20px; 
+            /* NEW: Polish */
+            letter-spacing: 0.5px;
+        }
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -89,33 +115,35 @@
             padding: 20px;
             border-radius: 10px;
             border: 1px solid var(--border-color);
+            /* NEW: Shadow for depth */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        .card-title {
-            font-size: 1em;
-            color: var(--text-secondary);
-            margin-bottom: 10px;
-        }
-        .card-value {
-            font-size: 2.5em;
-            font-weight: bold;
-        }
-        .chart-container {
-            grid-column: 1 / -1; /* Make chart span full width */
-            height: 350px;
-        }
+        .card-title { font-size: 1em; color: var(--text-secondary); margin-bottom: 10px; }
+        .card-value { font-size: 2.5em; font-weight: bold; }
+        .chart-container { grid-column: 1 / -1; height: 350px; }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 1em;
             background-color: var(--bg-light);
+            /* NEW: Rounded table */
+            border-radius: 8px;
+            overflow: hidden;
         }
         th, td {
-            border: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
             padding: 15px;
             text-align: left;
         }
-        th {
-            background-color: #31343d;
+        th { 
+            background-color: #31343d; 
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        /* NEW: Zebra-striping */
+        tr:nth-child(even) {
+            background-color: #2a2d35;
         }
         .loading, .error-message { 
             font-style: italic; 
@@ -124,9 +152,53 @@
             background-color: var(--bg-light);
             border-radius: 8px;
         }
-        .error-message {
-            color: var(--error-color);
+        .error-message { color: var(--error-color); }
+         .live-dot {
+            height: 10px; width: 10px; background-color: #22c55e;
+            border-radius: 50%; display: inline-block;
+            animation: pulse 1.5s infinite;
         }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        .table-input, .table-select {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 8px;
+            width: 95%;
+            font-size: 0.95em;
+            font-family: 'Inter', sans-serif;
+        }
+        .table-input:focus, .table-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 5px var(--accent);
+        }
+        .save-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+        .save-btn:hover { background-color: #16a34a; }
+        
+        .delete-btn {
+            background-color: var(--error-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-left: 5px;
+            font-weight: 500;
+        }
+        .delete-btn:hover { background-color: #b91c1c; }
     </style>
 </head>
 <body>
@@ -135,31 +207,28 @@
     <div class="sidebar">
         <div class="sidebar-header">LinkSphere</div>
         <nav class="sidebar-nav">
-            <a href="#dashboard" class="nav-link active">Dashboard</a>
-            <a href="#devices" class="nav-link">Devices</a>
-            <a href="#users" class="nav-link">Users</a>
+            <a href="#dashboard" class="nav-link active">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.18v4.64A2.18 2.18 0 0 0 5.18 20h13.64A2.18 2.18 0 0 0 21 17.82v-4.64m-18 0v-4.64A2.18 2.18 0 0 1 5.18 4h13.64A2.18 2.18 0 0 1 21 6.18v4.64m-18 0h18M5.18 8.45h.01m-.01 7.1h.01" /></svg>
+                Dashboard
+            </a>
+            <a href="#devices" class="nav-link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 17.18v-6.36m0 6.36a2.18 2.18 0 0 0 2.18 2.18h9.64a2.18 2.18 0 0 0 2.18-2.18v-6.36m-14 0V6.18A2.18 2.18 0 0 1 7.18 4h9.64A2.18 2.18 0 0 1 19 6.18v4.64m-14 0h14m-7 5.45v.01" /></svg>
+                Devices
+            </a>
+            <a href="#users" class="nav-link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.38 20v-1.82a4.36 4.36 0 0 0-4.36-4.36h-2.04a4.36 4.36 0 0 0-4.36 4.36V20m10.76 0a2.18 2.18 0 0 0 2.18-2.18v-1.82a4.36 4.36 0 0 0-4.36-4.36h-2.04a4.36 4.36 0 0 0-4.36 4.36v1.82A2.18 2.18 0 0 0 6.62 20m10.76 0H6.62M12 11.09a3.27 3.27 0 1 0 0-6.54 3.27 3.27 0 0 0 0 6.54Z" /></svg>
+                Users
+            </a>
+            <a href="#network" class="nav-link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.45 16.27h.01m3.54 0h.01m3.54 0h.01m-10.77-3.63a4.36 4.36 0 0 1 7.72 0m-10.9 0a8.73 8.73 0 0 1 14.08 0M5.18 4v.01m13.64-.01v.01M4 20h16" /></svg>
+                Network Overview
+            </a>
         </nav>
     </div>
 
     <div class="main-content">
-        <!-- Dashboard Page -->
         <div id="dashboard" class="page active">
-            <h1>Dashboard</h1>
-            <style>
-                .live-dot {
-                    height: 10px; width: 10px; background-color: #22c55e;
-                    border-radius: 50%; display: inline-block;
-                    animation: pulse 1.5s infinite;
-                }
-                @keyframes pulse {
-                    0% { opacity: 1; }
-                    50% { opacity: 0.3; }
-                    100% { opacity: 1; }
-                }
-            </style>
-
             <h1>Dashboard <span class="live-dot"></span><span style="font-size: 0.5em; color: var(--text-secondary); margin-left: 5px;">LIVE</span></h1>
-           
             <p>Overview of your network health, device activity, and usage.</p>
             <div class="dashboard-grid">
                 <div class="card">
@@ -183,16 +252,25 @@
             </div>
         </div>
         
-        <!-- Devices Page -->
         <div id="devices" class="page">
             <h1>Devices</h1>
+            <p>All devices registered on the network. Edit name/owner and click Save, or click Delete.</p>
             <div id="devices-table-container" class="loading">Loading devices...</div>
         </div>
 
-        <!-- Users Page -->
         <div id="users" class="page">
             <h1>Users</h1>
+            <p>All registered users.</p>
             <div id="users-table-container" class="loading">Loading users...</div>
+        </div>
+
+        <div id="network" class="page">
+            <h1>Network Overview</h1>
+            <p>Data usage and device count per network (SSID).</p>
+            <div class="card chart-container" style="height: 400px; margin-bottom: 20px;">
+                <canvas id="network-usage-chart"></canvas>
+            </div>
+            <div id="network-table-container" class="loading">Loading network data...</div>
         </div>
     </div>
 
@@ -201,10 +279,22 @@
             const navLinks = document.querySelectorAll('.nav-link');
             const pages = document.querySelectorAll('.page');
             const statusBanner = document.getElementById('connection-status');
-            let usageOverTimeChart, topDevicesChart; // To hold chart instances
-
-            // --- DECLARED EARLY TO AVOID REFERENCE ERROR ---
+            let usageOverTimeChart, topDevicesChart, networkUsageChart; 
             const API_BASE_URL = 'http://127.0.0.1:5000/api';
+            const GENERIC_ERROR_MESSAGE = 'Failed to load data. Is the Python server (app.py) running?';
+
+            let allUsers = [];
+
+            async function fetchAllUsers() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/users`);
+                    if (!response.ok) throw new Error('Could not fetch users');
+                    allUsers = await response.json();
+                } catch (e) {
+                    handleFetchError(e);
+                    allUsers = []; 
+                }
+            }
 
             // --- NAVIGATION ---
             function showPage(hash) {
@@ -212,10 +302,10 @@
                 pages.forEach(page => page.classList.toggle('active', page.id === targetId));
                 navLinks.forEach(link => link.classList.toggle('active', link.hash === hash));
                 
-                // Load data for the activated page
                 if (targetId === 'dashboard') loadDashboardData();
                 if (targetId === 'devices') loadDevicesData();
                 if (targetId === 'users') loadUsersData();
+                if (targetId === 'network') loadNetworkData();
             }
 
             navLinks.forEach(link => {
@@ -226,91 +316,159 @@
             });
 
             window.addEventListener('hashchange', () => showPage(window.location.hash));
-            showPage(window.location.hash || '#dashboard'); // Initial page load
+            
+            // --- Event delegation for Save and Delete buttons ---
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('save-btn')) {
+                    const deviceId = e.target.dataset.deviceId;
+                    const row = e.target.closest('tr');
+                    
+                    const newName = row.querySelector('.device-name-input').value;
+                    const newUserId = row.querySelector('.user-select').value;
+                    
+                    updateDevice(deviceId, newName, newUserId);
+                }
+                else if (e.target && e.target.classList.contains('delete-btn')) {
+                    const deviceId = e.target.dataset.deviceId;
+                    const row = e.target.closest('tr');
+                    const deviceName = row.querySelector('.device-name-input').value;
+                    
+                    if (confirm(`Are you sure you want to delete "${deviceName}"? \n\nThis action is permanent and will delete all associated usage data.`)) {
+                        deleteDevice(deviceId);
+                    }
+                }
+            });
 
-            // --- AUTO-REFRESH THE DASHBOARD ---
-            // This will re-run the dashboard load function every 5 seconds (5000 ms)
+            // --- AUTO-REFRESH ---
             setInterval(() => {
-                // Only refresh if the user is currently on the dashboard page
-                if (document.getElementById('dashboard').classList.contains('active')) {
+                const activePage = document.querySelector('.page.active');
+                if (!activePage) return;
+                
+                if (activePage.id === 'dashboard') {
                     loadDashboardData();
+                }
+                // Refresh network page
+                if (activePage.id === 'network') {
+                    loadNetworkData();
                 }
             }, 5000);
 
             // --- DATA FETCHING AND RENDERING ---
-            const GENERIC_ERROR_MESSAGE = 'Failed to load data. Is the Python server running?';
-
             function handleFetchError(e) {
                 console.error(e);
-                statusBanner.textContent = 'Connection Error: Is the Python server running?';
+                statusBanner.textContent = `Error: ${e.message}`;
                 statusBanner.classList.remove('success');
                 statusBanner.classList.add('error');
             }
 
-            function handleFetchSuccess() {
-                statusBanner.textContent = 'Connected';
+            function handleFetchSuccess(message = 'Connected') {
+                statusBanner.textContent = message;
                 statusBanner.classList.remove('error');
                 statusBanner.classList.add('success');
+                setTimeout(() => {
+                    if (statusBanner.textContent === message) { // Only revert if not overwritten
+                        statusBanner.textContent = 'Connected';
+                        statusBanner.classList.remove('error', 'success');
+                    }
+                }, 2000);
             }
             
-            // 1. Dashboard Data
-            async function loadDashboardData() {
+            // 1. Dashboard Data (Unchanged)
+            async function loadDashboardData() { /* ... (This function is unchanged) ... */ 
                 let success = true;
-                // Fetch stats for cards
+                // Fetch stats
                 try {
                     const statsResponse = await fetch(`${API_BASE_URL}/dashboard-stats`);
                     if (!statsResponse.ok) throw new Error('Network response was not ok for stats');
                     const stats = await statsResponse.json();
                     document.getElementById('connected-devices-val').innerText = stats.connectedDevices;
                     document.getElementById('total-usage-val').innerText = `${stats.totalUsageGB} GB`;
-                    document.getElementById('top-device-val').innerText = (stats.topDevice) 
+                    document.getElementById('top-device-val').innerText = (stats.topDevice.name !== 'N/A') 
                         ? `${stats.topDevice.name} (${stats.topDevice.usageGB} GB)`
                         : 'N/A';
                 } catch (e) { 
-                    success = false;
-                    handleFetchError(e);
+                    success = false; handleFetchError(e);
                     document.getElementById('connected-devices-val').innerText = "Error";
                     document.getElementById('total-usage-val').innerText = "Error";
                     document.getElementById('top-device-val').innerText = "Error";
                 }
                 
-                // Fetch and render line chart
+                // Fetch line chart
                 try {
                     const usageResponse = await fetch(`${API_BASE_URL}/usage-over-time`);
                      if (!usageResponse.ok) throw new Error('Network response was not ok for usage');
                     const usageData = await usageResponse.json();
                     renderUsageOverTimeChart(usageData);
                 } catch (e) { 
-                    success = false;
-                    handleFetchError(e);
+                    success = false; handleFetchError(e);
                     document.getElementById('usage-chart-card').innerHTML = `<div class="error-message">${GENERIC_ERROR_MESSAGE}</div>`;
                 }
                 
-                // Fetch and render bar chart
+                // Fetch bar chart
                 try {
                     const topDevicesResponse = await fetch(`${API_BASE_URL}/top-devices-today`);
                     if (!topDevicesResponse.ok) throw new Error('Network response was not ok for top devices');
                     const topDevicesData = await topDevicesResponse.json();
                     renderTopDevicesChart(topDevicesData);
                 } catch (e) { 
-                    success = false;
-                    handleFetchError(e);
+                    success = false; handleFetchError(e);
                     document.getElementById('top-devices-chart-card').innerHTML = `<div class="error-message">${GENERIC_ERROR_MESSAGE}</div>`;
                 }
 
                 if (success) handleFetchSuccess();
             }
 
-            // 2. Devices Table Data
-            async function loadDevicesData() {
+            // 2. Devices Table Data (Unchanged from last step)
+            async function loadDevicesData() { /* ... (This function is unchanged) ... */
                 const container = document.getElementById('devices-table-container');
                 try {
                     const response = await fetch(`${API_BASE_URL}/devices`);
                     if (!response.ok) throw new Error('Network response was not ok');
                     const devices = await response.json();
-                    let tableHTML = `<table><tr><th>Device ID</th><th>Name</th><th>Type</th><th>MAC Address</th><th>Owner ID</th></tr>`;
+                    
+                    const buildUserOptions = (currentUserId) => {
+                        let optionsHTML = '';
+                        allUsers.forEach(user => {
+                            const selected = (user.User_ID === currentUserId) ? 'selected' : '';
+                            optionsHTML += `<option value="${user.User_ID}" ${selected}>
+                                ${user.First_Name} ${user.Second_Name || ''}
+                            </option>`;
+                        });
+                        return optionsHTML;
+                    };
+
+                    let tableHTML = `<table><tr>
+                        <th>Device Name</th>
+                        <th>Owner</th>
+                        <th>Device Type</th>
+                        <th>MAC Address</th>
+                        <th>Total Usage</th>
+                        <th>Last Seen</th>
+                        <th>Actions</th>
+                        </tr>`;
+                        
                     devices.forEach(d => {
-                        tableHTML += `<tr><td>${d.Device_ID}</td><td>${d.Device_Name}</td><td>${d.Device_Type}</td><td>${d.MAC_Address}</td><td>${d.User_ID}</td></tr>`;
+                        const userOptions = buildUserOptions(d.User_ID);
+                        
+                        tableHTML += `
+                            <tr data-row-id="${d.Device_ID}">
+                                <td>
+                                    <input type="text" class="table-input device-name-input" value="${d.Device_Name}">
+                                </td>
+                                <td>
+                                    <select class="table-select user-select">
+                                        ${userOptions}
+                                    </select>
+                                </td>
+                                <td>${d.Device_Type}</td>
+                                <td>${d.MAC_Address}</td>
+                                <td>${parseFloat(d.totalGB).toFixed(2)} GB</td>
+                                <td>${d.lastSeen}</td>
+                                <td style="min-width: 170px;">
+                                    <button class="save-btn" data-device-id="${d.Device_ID}">Save</button>
+                                    <button class="delete-btn" data-device-id="${d.Device_ID}">Delete</button>
+                                </td>
+                            </tr>`;
                     });
                     tableHTML += '</table>';
                     container.innerHTML = tableHTML;
@@ -323,16 +481,32 @@
                 }
             }
 
-            // 3. Users Table Data
+            // 3. Users Table Data (UPDATED: JS now matches backend)
             async function loadUsersData() {
                 const container = document.getElementById('users-table-container');
                  try {
                     const response = await fetch(`${API_BASE_URL}/users`);
                     if (!response.ok) throw new Error('Network response was not ok');
                     const users = await response.json();
-                    let tableHTML = `<table><tr><th>User ID</th><th>First Name</th><th>Second Name</th><th>Email</th><th>Phone</th></tr>`;
+                    
+                    // The table headers were missing Email and Phone
+                    let tableHTML = `<table><tr>
+                        <th>User ID</th>
+                        <th>First Name</th>
+                        <th>Second Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        </tr>`;
+                    
                     users.forEach(u => {
-                        tableHTML += `<tr><td>${u.User_ID}</td><td>${u.First_Name}</td><td>${u.Second_Name || ''}</td><td>${u.Email_ID}</td><td>${u.Phone_No}</td></tr>`;
+                        // This will now correctly display the data
+                        tableHTML += `<tr>
+                            <td>${u.User_ID}</td>
+                            <td>${u.First_Name}</td>
+                            <td>${u.Second_Name || ''}</td>
+                            <td>${u.Email_ID || 'N/A'}</td>
+                            <td>${u.Phone_No || 'N/A'}</td>
+                            </tr>`;
                     });
                     tableHTML += '</table>';
                     container.innerHTML = tableHTML;
@@ -345,7 +519,94 @@
                 }
             }
 
-            // --- CHART RENDERING FUNCTIONS ---
+            // 4. Network Overview Data (Unchanged)
+            async function loadNetworkData() {
+                const tableContainer = document.getElementById('network-table-container');
+                const chartContainer = document.getElementById('network-usage-chart');
+                 try {
+                    const response = await fetch(`${API_BASE_URL}/network-overview`);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const data = await response.json();
+                    
+                    let tableHTML = `<table><tr><th>Network (SSID)</th><th>Total Usage (GB)</th><th>Device Count</th></tr>`;
+                    data.tableData.forEach(n => {
+                        tableHTML += `<tr>
+                            <td>${n.ssid}</td>
+                            <td>${n.totalGB.toFixed(2)} GB</td>
+                            <td>${n.deviceCount}</td>
+                            </tr>`;
+                    });
+                    tableHTML += '</table>';
+                    tableContainer.innerHTML = tableHTML;
+                    tableContainer.classList.remove('loading');
+
+                    renderNetworkUsageChart(data.chartData);
+
+                    handleFetchSuccess();
+                } catch (e) { 
+                    handleFetchError(e);
+                    tableContainer.innerHTML = `<div class="error-message">${GENERIC_ERROR_MESSAGE}</div>`;
+                    tableContainer.classList.remove('loading');
+                    chartContainer.innerHTML = `<div class="error-message">${GENERIC_ERROR_MESSAGE}</div>`;
+                }
+            }
+            
+            // --- FUNCTION TO UPDATE DEVICE (Unchanged) ---
+            async function updateDevice(deviceId, newName, newUserId) { /* ... (This function is unchanged) ... */
+                try {
+                    const response = await fetch(`${API_BASE_URL}/device/update/${deviceId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            Device_Name: newName,
+                            User_ID: newUserId
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to update');
+                    }
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        handleFetchSuccess('Device Updated!');
+                    } else {
+                        handleFetchError(new Error('Update failed on server'));
+                    }
+                } catch (e) {
+                    handleFetchError(e);
+                }
+            }
+
+            // --- FUNCTION TO DELETE DEVICE (Unchanged) ---
+            async function deleteDevice(deviceId) { /* ... (This function is unchanged) ... */
+                 try {
+                    const response = await fetch(`${API_BASE_URL}/device/delete/${deviceId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to delete');
+                    }
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        handleFetchSuccess('Device Deleted!');
+                        // Reload the device list to show the device is gone
+                        loadDevicesData(); 
+                    } else {
+                        handleFetchError(new Error('Delete failed on server'));
+                    }
+                } catch (e) {
+                    handleFetchError(e);
+                }
+            }
+
+            // --- CHART RENDERING FUNCTIONS (All unchanged) ---
             const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
             const chartOptions = {
                 maintainAspectRatio: false,
@@ -356,7 +617,7 @@
                 }
             };
             
-            function renderUsageOverTimeChart(data) {
+            function renderUsageOverTimeChart(data) { /* ... (Unchanged) ... */ 
                 const ctx = document.getElementById('usage-over-time-chart').getContext('2d');
                 if(usageOverTimeChart) usageOverTimeChart.destroy();
                 usageOverTimeChart = new Chart(ctx, {
@@ -376,7 +637,7 @@
                 });
             }
 
-            function renderTopDevicesChart(data) {
+            function renderTopDevicesChart(data) { /* ... (Unchanged) ... */
                 const ctx = document.getElementById('top-devices-chart').getContext('2d');
                 if(topDevicesChart) topDevicesChart.destroy();
                 topDevicesChart = new Chart(ctx, {
@@ -391,11 +652,35 @@
                             borderWidth: 1
                         }]
                     },
-                    options: {...chartOptions, plugins: {...chartOptions.plugins, title: { display: true, text: 'Top Devices Today', color: 'white', font: { size: 16 }}}}
+                    options: {...chartOptions, plugins: {...chartOptions.plugins, title: { display: true, text: 'Top Devices by Usage', color: 'white', font: { size: 16 }}}}
                 });
             }
+
+             function renderNetworkUsageChart(data) { /* ... (Unchanged) ... */
+                const ctx = document.getElementById('network-usage-chart').getContext('2d');
+                if(networkUsageChart) networkUsageChart.destroy();
+                networkUsageChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Total Usage (GB)',
+                            data: data.data,
+                            backgroundColor: 'rgba(34, 197, 94, 0.6)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {...chartOptions, indexAxis: 'y',
+                        plugins: {...chartOptions.plugins, title: { display: true, text: 'Usage per Network', color: 'white', font: { size: 16 }}}}
+                });
+            }
+            
+            // --- INITIAL PAGE LOAD ---
+            fetchAllUsers().then(() => {
+                showPage(window.location.hash || '#dashboard');
+            });
         });
     </script>
 </body>
 </html>
-
