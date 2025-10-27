@@ -1,0 +1,32 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+.env/
+
+# Flask instance folder (often contains configs/secrets)
+instance/
+
+# Secret or local configuration files
+# Good practice to avoid committing hardcoded secrets
+.env
+config.ini
+
+# IDE & Editor specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
