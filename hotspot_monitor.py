@@ -4,7 +4,7 @@ Real-Time Mobile Hotspot Monitor with Scapy
 Monitors devices connected to your mobile hotspot and tracks data usage.
 (Version 4: Fixes rounding bug for small data packets)
 """
-import mysql.connector
+import mysql.connector 
 import time
 import threading
 from datetime import datetime
@@ -15,7 +15,7 @@ import socket
 
 # --- CONFIGURATION: YOU MUST CHANGE THESE ---
 YOUR_INTERFACE_NAME = "Wi-Fi"  # This is correct
-YOUR_NETWORK_ID = "N005"       # This is fine
+YOUR_NETWORK_ID = "N001"       # This is fine
 # --- END CONFIGURATION ---
 
 # --- DATABASE CONFIG (same as app.py) ---
@@ -75,7 +75,8 @@ def get_or_create_device(mac, ip):
         return None
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    # --- FIX 1: Added buffered=True ---
+    cursor = conn.cursor(dictionary=True, buffered=True)
     
     cursor.execute("SELECT Device_ID FROM Device WHERE MAC_Address = %s", (mac,))
     device = cursor.fetchone()
@@ -128,7 +129,8 @@ def log_data_to_db():
 
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Logging data for {len(current_data_usage)} devices...")
         conn = get_db_connection()
-        cursor = conn.cursor()
+        # --- FIX 2: Added buffered=True ---
+        cursor = conn.cursor(buffered=True)
         
         for mac, usage in current_data_usage.items():
             ip = device_ip_map.get(mac, 'N/A')
@@ -196,7 +198,7 @@ def packet_callback(packet):
     src_mac = packet.src.lower()
     dst_mac = packet.dst.lower()
     src_ip = packet[IP].src
-    dst_ip = packet[IP].dst
+    dst_ip = packet[IP].dst  # <-- SYNTAX ERROR FIX
     packet_size = len(packet)
 
     if src_mac == MY_MAC or dst_mac == MY_MAC:

@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request, make_response, redirect, url_for, fla
 import mysql.connector
 from flask_cors import CORS
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # <-- MODIFIED: Ensure timedelta is imported
 import uuid
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +20,25 @@ db_config = {'host': 'localhost', 'user': 'root', 'password': '1234', 'database'
 
 def get_db_connection():
     return mysql.connector.connect(**db_config)
+
+# --- NEW HELPER FUNCTION ---
+def format_data_unit(mb_value):
+    """Converts a float MB value to a readable string (MB or GB)."""
+    if mb_value is None or mb_value == 0:
+        return "0 MB"
+    try:
+        mb_value = float(mb_value)
+    except (ValueError, TypeError):
+        return "N/A"
+    
+    if abs(mb_value) < 1024:
+        # Show MB if it's less than 1 GB
+        return f"{round(mb_value, 2)} MB"
+    else:
+        # Show GB if it's 1 GB or more
+        gb_value = mb_value / 1024
+        return f"{round(gb_value, 2)} GB"
+# --- END NEW HELPER FUNCTION ---
 
 class User(UserMixin):
     def __init__(self, id, email, first_name):
@@ -98,13 +117,21 @@ def get_device_details(device_id):
         usage_graph_data = {"labels": [], "data": []}
         if not df.empty:
             df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-            usage_resampled = df.set_index('Timestamp').resample('5min')['total_usage'].sum().cumsum() / 1024
+            usage_resampled = df.set_index('Timestamp').resample('5min')['total_usage'].sum().cumsum()
             usage_graph_data = {"labels": usage_resampled.index.strftime('%H:%M').tolist(), "data": usage_resampled.values.round(2).tolist()}
         
         log_query = "SELECT cl.Timestamp, cl.IP_Address, n.SSID, du.Data_Downloaded, du.Data_Uploaded FROM Connection_Log cl JOIN Network n ON cl.Network_ID = n.Network_ID JOIN Data_Usage du ON cl.Log_ID = du.Log_ID WHERE cl.Device_ID = %s ORDER BY cl.Timestamp DESC LIMIT 20;"
         cursor.execute(log_query, (device_id,))
         connection_logs = cursor.fetchall()
-        formatted_logs = [{'Timestamp': log['Timestamp'].strftime('%Y-%m-%d %H:%M:%S'), 'IP_Address': log['IP_Address'], 'Network_SSID': log['SSID'], 'Data_Downloaded_MB': round(log['Data_Downloaded'], 2), 'Data_Uploaded_MB': round(log['Data_Uploaded'], 2)} for log in connection_logs]
+        
+        formatted_logs = [{
+            'Timestamp': log['Timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            'IP_Address': log['IP_Address'],
+            'Network_SSID': log['SSID'],
+            'Data_Downloaded_Formatted': format_data_unit(log['Data_Downloaded']),
+            'Data_Uploaded_Formatted': format_data_unit(log['Data_Uploaded'])
+        } for log in connection_logs]
+        
         cursor.close()
         conn.close()
         response_data = {"details": device_details, "usage_graph": usage_graph_data, "logs": formatted_logs}
@@ -118,9 +145,29 @@ def get_device_details(device_id):
 def export_devices():
     try:
         conn = get_db_connection()
-        query = """SELECT d.Device_ID, d.Device_Name, d.Device_Type, d.MAC_Address, CONCAT(u.First_Name, ' ', u.Second_Name) as Owner, COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded) / 1024, 0) as totalGB, MAX(cl.Timestamp) as lastSeen FROM Device d JOIN User u ON d.User_ID = u.User_ID LEFT JOIN Connection_Log cl ON d.Device_ID = cl.Device_ID LEFT JOIN Data_Usage du ON cl.Log_ID = du.Log_ID GROUP BY d.Device_ID, d.Device_Name, d.Device_Type, d.MAC_Address, Owner ORDER BY totalGB DESC;"""
+        query = """
+        SELECT 
+            d.Device_ID, d.Device_Name, d.Device_Type, d.MAC_Address, 
+            CONCAT(u.First_Name, ' ', u.Second_Name) as Owner, 
+            COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded), 0) as totalMB, 
+            MAX(cl.Timestamp) as lastSeen 
+        FROM Device d 
+        JOIN User u ON d.User_ID = u.User_ID 
+        LEFT JOIN Connection_Log cl ON d.Device_ID = cl.Device_ID 
+        LEFT JOIN Data_Usage du ON cl.Log_ID = du.Log_ID 
+        GROUP BY d.Device_ID, d.Device_Name, d.Device_Type, d.MAC_Address, Owner 
+        ORDER BY totalMB DESC;
+        """
         df = pd.read_sql(query, conn)
         conn.close()
+        
+        df['Total_Usage_Formatted'] = df['totalMB'].apply(format_data_unit)
+        df['lastSeen'] = df['lastSeen'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notnull(x) else 'Never')
+        
+        df = df.rename(columns={'totalMB': 'Total_Usage_MB'})
+        export_cols = ['Device_ID', 'Device_Name', 'Device_Type', 'MAC_Address', 'Owner', 'Total_Usage_Formatted', 'Total_Usage_MB', 'lastSeen']
+        df = df[export_cols]
+
         csv_data = df.to_csv(index=False, encoding='utf-8')
         response = make_response(csv_data)
         response.headers["Content-Disposition"] = "attachment; filename=devices_export.csv"
@@ -197,18 +244,37 @@ def get_all_devices():
             d.Device_Type, 
             d.MAC_Address, 
             d.User_ID,
-            COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded) / 1024, 0) as totalGB,
+            COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded), 0) as totalMB,
             MAX(cl.Timestamp) as lastSeen
         FROM Device d
         LEFT JOIN Connection_Log cl ON d.Device_ID = cl.Device_ID
         LEFT JOIN Data_Usage du ON cl.Log_ID = du.Log_ID
         GROUP BY d.Device_ID, d.Device_Name, d.Device_Type, d.MAC_Address, d.User_ID
-        ORDER BY totalGB DESC
+        ORDER BY totalMB DESC
         """
         df = pd.read_sql(query, conn)
         conn.close()
         
+        # --- NEW STATUS LOGIC ---
+        now = datetime.now()
+        # If lastSeen is older than 90 seconds, mark as Not Connected
+        live_threshold = timedelta(seconds=90) 
+
+        def get_status(last_seen_timestamp):
+            if pd.isnull(last_seen_timestamp):
+                return "Not Connected"
+            # pd.read_sql makes last_seen_timestamp a pandas Timestamp object
+            if (now - last_seen_timestamp) < live_threshold:
+                return "Connected"
+            else:
+                return "Not Connected"
+
+        # Apply the function to create the new 'status' column
+        df['status'] = df['lastSeen'].apply(get_status)
+        # --- END NEW STATUS LOGIC ---
+        
         df['lastSeen'] = df['lastSeen'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notnull(x) else 'Never')
+        df['totalUsageFormatted'] = df['totalMB'].apply(format_data_unit)
         
         return jsonify(df.to_dict('records'))
     except Exception as e:
@@ -275,16 +341,16 @@ def get_dashboard_stats():
         cursor.execute("SELECT COUNT(DISTINCT Device_ID) as count FROM Device")
         connected_devices = cursor.fetchone()['count']
         
-        cursor.execute("SELECT COALESCE(SUM(Data_Downloaded + Data_Uploaded) / 1024, 0) as total FROM Data_Usage")
-        total_usage = cursor.fetchone()['total']
+        cursor.execute("SELECT COALESCE(SUM(Data_Downloaded + Data_Uploaded), 0) as total FROM Data_Usage")
+        total_usage_mb = cursor.fetchone()['total']
         
         top_device_query = """
-        SELECT d.Device_Name, COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded) / 1024, 0) as totalGB
+        SELECT d.Device_Name, COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded), 0) as totalMB
         FROM Device d
         LEFT JOIN Connection_Log cl ON d.Device_ID = cl.Device_ID
         LEFT JOIN Data_Usage du ON cl.Log_ID = du.Log_ID
         GROUP BY d.Device_ID, d.Device_Name
-        ORDER BY totalGB DESC
+        ORDER BY totalMB DESC
         LIMIT 1
         """
         cursor.execute(top_device_query)
@@ -295,10 +361,10 @@ def get_dashboard_stats():
         
         return jsonify({
             "connectedDevices": connected_devices,
-            "totalUsageGB": round(total_usage, 2),
+            "totalUsageFormatted": format_data_unit(total_usage_mb),
             "topDevice": {
                 "name": top_device['Device_Name'] if top_device else 'N/A',
-                "usageGB": round(top_device['totalGB'], 2) if top_device else 0
+                "usageFormatted": format_data_unit(top_device['totalMB']) if top_device else "0 MB"
             }
         })
     except Exception as e:
@@ -323,7 +389,7 @@ def get_usage_over_time():
             return jsonify({"labels": [], "data": []})
         
         df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-        usage_resampled = df.set_index('Timestamp').resample('1H')['total_usage'].sum().cumsum() / 1024
+        usage_resampled = df.set_index('Timestamp').resample('1H')['total_usage'].sum().cumsum()
         
         return jsonify({
             "labels": usage_resampled.index.strftime('%m-%d %H:%M').tolist(),
@@ -340,13 +406,13 @@ def get_top_devices_today():
         conn = get_db_connection()
         today = datetime.now().date()
         query = """
-        SELECT d.Device_Name, COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded) / 1024, 0) as totalGB
+        SELECT d.Device_Name, COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded), 0) as totalMB
         FROM Device d
         LEFT JOIN Connection_Log cl ON d.Device_ID = cl.Device_ID
         LEFT JOIN Data_Usage du ON cl.Log_ID = du.Log_ID
         WHERE DATE(cl.Timestamp) = %s
         GROUP BY d.Device_ID, d.Device_Name
-        ORDER BY totalGB DESC
+        ORDER BY totalMB DESC
         LIMIT 5
         """
         cursor = conn.cursor(dictionary=True)
@@ -357,7 +423,7 @@ def get_top_devices_today():
         
         return jsonify({
             "labels": [r['Device_Name'] for r in results],
-            "data": [round(r['totalGB'], 2) for r in results]
+            "data": [round(r['totalMB'], 2) for r in results]
         })
     except Exception as e:
         print(f"Error in /api/top-devices-today: {e}")
@@ -371,13 +437,13 @@ def get_network_overview():
         query = """
         SELECT 
             n.SSID,
-            COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded) / 1024, 0) as totalGB,
+            COALESCE(SUM(du.Data_Downloaded + du.Data_Uploaded), 0) as totalMB,
             COUNT(DISTINCT cl.Device_ID) as deviceCount
         FROM Network n
         LEFT JOIN Connection_Log cl ON n.Network_ID = cl.Network_ID
         LEFT JOIN Data_Usage du ON cl.Log_ID = du.Log_ID
         GROUP BY n.Network_ID, n.SSID
-        ORDER BY totalGB DESC
+        ORDER BY totalMB DESC
         """
         cursor = conn.cursor(dictionary=True)
         cursor.execute(query)
@@ -386,10 +452,15 @@ def get_network_overview():
         conn.close()
         
         return jsonify({
-            "tableData": [{"ssid": r['SSID'], "totalGB": float(r['totalGB']), "deviceCount": r['deviceCount']} for r in results],
+            "tableData": [{
+                "ssid": r['SSID'], 
+                "totalUsageFormatted": format_data_unit(r['totalMB']),
+                "totalMB": float(r['totalMB']),
+                "deviceCount": r['deviceCount']
+            } for r in results],
             "chartData": {
                 "labels": [r['SSID'] for r in results],
-                "data": [round(float(r['totalGB']), 2) for r in results]
+                "data": [round(float(r['totalMB']), 2) for r in results]
             }
         })
     except Exception as e:
