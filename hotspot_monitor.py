@@ -15,7 +15,7 @@ import socket
 
 # --- CONFIGURATION: YOU MUST CHANGE THESE ---
 YOUR_INTERFACE_NAME = "Wi-Fi"  # This is correct
-YOUR_NETWORK_ID = "N001"       # This is fine
+YOUR_NETWORK_ID = "N008"       # This is fine
 # --- END CONFIGURATION ---
 
 # --- DATABASE CONFIG (same as app.py) ---
